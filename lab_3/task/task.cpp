@@ -1,78 +1,91 @@
-#include <windows.h>
+﻿#include <windows.h>
 #include <iostream>
-#include <fstream>
+#include <string>
+#include <sstream>
 #include <chrono>
 
-constexpr int NUM_OPERATIONS = 100;
+#pragma comment(lib, "winmm.lib")  // Подключаем библиотеку для использования timeGetTime
 
+using namespace std;
+
+// Количество операций в каждом потоке
+const int OPERATION_COUNT = 1500;
+
+// Структура для передачи параметров потоку
 struct ThreadData {
-    int threadId;
-    std::chrono::time_point<std::chrono::system_clock> startTime;
-    std::ofstream* logFile;
-    HANDLE* semaphore;
+    int threadNum;
+    HANDLE logFileHandle;
+    DWORD startTime; // Время начала работы программы
 };
 
-void SomeLongOperation() {
-    for (int i = 0; i < 10000000; ++i) {
-        const auto k = i * i;
-        i += k;
-        for (int o = 0; o < k; ++o) {
-            i -= k;
+// Функция потока
+DWORD WINAPI ThreadProc(CONST LPVOID lpParam)
+{
+    ThreadData* data = static_cast<ThreadData*>(lpParam);
+    int num = data->threadNum;
+    HANDLE logFileHandle = data->logFileHandle;
+    DWORD startTime = data->startTime;
+
+    // Цикл, выполняющий заданное количество операций
+    for (int i = 0; i < OPERATION_COUNT; i++) {
+        DWORD currentTime = timeGetTime();  // Получаем текущее время
+        DWORD elapsedTime = currentTime - startTime; // Вычисляем время выполнения операции
+
+        // Формируем строку с результатами
+        std::ostringstream oss;
+        oss << elapsedTime << " \n";
+        std::string output = oss.str();
+
+        // Записываем строку в файл
+        DWORD bytesWritten;
+        WriteFile(logFileHandle, output.c_str(), output.size(), &bytesWritten, NULL);
+    }
+
+    ExitThread(0);
+}
+
+int main(int argc, char* argv[])
+{
+    const int threadCount = 2;
+
+    // Открываем файл для записи данных
+    HANDLE logFileHandle = CreateFile(L"thread_log.txt", GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (logFileHandle == INVALID_HANDLE_VALUE) {
+        cerr << "Error opening file for logging" << endl;
+        return 1;
+    }
+
+    HANDLE handles[threadCount];
+    ThreadData threadData[threadCount];
+
+    // Получаем начальное время
+    DWORD startTime = timeGetTime();
+
+    // Создаем потоки
+    for (int i = 0; i < threadCount; i++) {
+        threadData[i] = { i + 1, logFileHandle, startTime };  // Инициализируем данные потока
+        handles[i] = CreateThread(NULL, 0, &ThreadProc, &threadData[i], 0, NULL);
+        if (handles[i] == NULL) {
+            cerr << "Error creating thread" << endl;
+            CloseHandle(logFileHandle);
+            return 1;
         }
     }
-}
 
-DWORD WINAPI ThreadFunction(const LPVOID param) {
-    const auto* data = static_cast<ThreadData*>(param);
-    const int threadId = data->threadId;
-    std::ofstream& logFile = *(data->logFile);
-    const HANDLE* semaphore = data->semaphore;
+    // Устанавливаем более высокий приоритет для первого потока
+    //SetThreadPriority(handles[0], THREAD_PRIORITY_HIGHEST);
 
-    const auto startTime = data->startTime;
+    // Ожидаем завершения всех потоков
+    WaitForMultipleObjects(threadCount, handles, TRUE, INFINITE);
 
-    for (int i = 0; i < NUM_OPERATIONS; ++i) {
-        SomeLongOperation();
-        auto currentTime = std::chrono::high_resolution_clock::now();
-        const auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - startTime).count();
-        WaitForSingleObject(*semaphore, INFINITE);
-        logFile << std::format("{}\t{}\n", threadId, elapsedTime);
-        ReleaseSemaphore(*semaphore, 1, nullptr);
+    // Закрываем дескрипторы потоков
+    for (int i = 0; i < threadCount; i++) {
+        CloseHandle(handles[i]);
     }
 
-    return 0;
-}
+    // Закрываем файл
+    CloseHandle(logFileHandle);
 
-int main() {
-    std::string temp;
-    std::cin >> temp;
-    std::ofstream logFile("log.txt");
-
-    if (!logFile.is_open()) {
-        std::cerr << "Unable to open log file" << std::endl;
-        return 1;
-    }
-
-    HANDLE semaphore = CreateSemaphore(nullptr, 1, 1, nullptr);
-    if (semaphore == nullptr) {
-        std::cerr << "Error: Unable to create semaphore" << std::endl;
-        return 1;
-    }
-
-    auto* handles = new HANDLE[2];
-    const auto startTime = std::chrono::high_resolution_clock::now();
-    ThreadData data1 = { 1, startTime, &logFile, &semaphore };
-    ThreadData data2 = { 2, startTime, &logFile, &semaphore };
-
-    handles[0] = CreateThread(nullptr, 0, ThreadFunction, &data1, 0, nullptr);
-    handles[1] = CreateThread(nullptr, 0, ThreadFunction, &data2, 0, nullptr);
-
-    SetThreadPriority(handles[0], THREAD_PRIORITY_TIME_CRITICAL);
-    SetThreadPriority(handles[1], THREAD_PRIORITY_NORMAL);
-
-    WaitForMultipleObjects(2, handles, TRUE, INFINITE);
-
-    delete[] handles;
-    CloseHandle(semaphore);
-
+    cout << "Logging completed. Check 'thread_log.txt' for results." << endl;
     return 0;
 }
