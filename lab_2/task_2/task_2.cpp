@@ -72,8 +72,8 @@ void processBlocks(const uint8_t* src, uint8_t* dst, int width, int height, int 
     }
 }
 
-// Основная функция
-int main(int argc, char* argv[]) {
+int main(int argc, char* argv[]) 
+{
     if (argc < 4) {
         std::cerr << "Usage: " << argv[0] << " <input.bmp> <output.bmp> <num_threads>" << std::endl;
         return 1;
@@ -83,9 +83,9 @@ int main(int argc, char* argv[]) {
     const char* outputFilename = argv[2];
     int numThreads = std::stoi(argv[3]);
 
-    // Открытие BMP файла
     std::ifstream inputFile(inputFilename, std::ios::binary);
-    if (!inputFile) {
+    if (!inputFile) 
+    {
         std::cerr << "Error opening input file." << std::endl;
         return 1;
     }
@@ -95,8 +95,8 @@ int main(int argc, char* argv[]) {
     inputFile.read(reinterpret_cast<char*>(&bmpHeader), sizeof(bmpHeader));
     inputFile.read(reinterpret_cast<char*>(&dibHeader), sizeof(dibHeader));
 
-    // Проверка формата
-    if (bmpHeader.fileType != 0x4D42) {
+    if (bmpHeader.fileType != 0x4D42) 
+    {
         std::cerr << "Not a valid BMP file." << std::endl;
         return 1;
     }
