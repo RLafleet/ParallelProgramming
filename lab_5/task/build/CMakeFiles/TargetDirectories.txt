@@ -1,0 +1,4 @@
+C:/PP/lab_5/task/build/CMakeFiles/lab_5-1.dir
+C:/PP/lab_5/task/build/CMakeFiles/lab_5-2.dir
+C:/PP/lab_5/task/build/CMakeFiles/ALL_BUILD.dir
+C:/PP/lab_5/task/build/CMakeFiles/ZERO_CHECK.dir
