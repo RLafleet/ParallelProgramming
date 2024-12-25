@@ -31,10 +31,8 @@ struct DIBHeader {
 };
 #pragma pack(pop)
 
-// Глобальные переменные
-std::mutex mtx; // Мьютекс для защиты доступа к данным
+std::mutex mtx; 
 
-// Функция для размытия изображения
 void blurImage(const uint8_t* src, uint8_t* dst, int width, int height, int startX, int startY, int blockSize) {
     int endX = std::min(startX + blockSize, width);
     int endY = std::min(startY + blockSize, height);
@@ -61,14 +59,13 @@ void blurImage(const uint8_t* src, uint8_t* dst, int width, int height, int star
     }
 }
 
-// Функция обработки квадратов
 void processBlocks(const uint8_t* src, uint8_t* dst, int width, int height, int blockSize, int blocksPerThread, int threadID) {
     for (int i = 0; i < blocksPerThread; ++i) {
         int blockX = (threadID * blocksPerThread + i) % (width / blockSize) * blockSize;
         int blockY = (threadID * blocksPerThread + i) / (width / blockSize) * blockSize;
         if (blockY < height) {
             blurImage(src, dst, width, height, blockX, blockY, blockSize);
-        }
+        } 
     }
 }
 
@@ -101,7 +98,6 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    // Чтение данных изображения
     int width = dibHeader.width;
     int height = dibHeader.height;
     int imageSize = width * height * 3;
@@ -111,8 +107,7 @@ int main(int argc, char* argv[])
     inputFile.read(reinterpret_cast<char*>(srcImage.data()), imageSize);
     inputFile.close();
 
-    // Создание потоков для обработки
-    int blockSize = 16; // Размер блока
+    int blockSize = 16; 
     int numBlocks = (width * height) / (blockSize * blockSize);
     int blocksPerThread = numBlocks / numThreads;
 
@@ -121,7 +116,6 @@ int main(int argc, char* argv[])
         threads.emplace_back(processBlocks, srcImage.data(), dstImage.data(), width, height, blockSize, blocksPerThread, i);
     }
 
-    // Сохранение результата в BMP файл
     std::ofstream outputFile(outputFilename, std::ios::binary);
     if (!outputFile) {
         std::cerr << "Error opening output file." << std::endl;
