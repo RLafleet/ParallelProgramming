@@ -34,11 +34,9 @@ struct DIBHeader {
 };
 #pragma pack(pop)
 
-// Глобальные переменные
 std::mutex mtx;
 std::ofstream logFile;
 
-// Функция для размытия изображения с замером времени
 void blurImage(const uint8_t* src, uint8_t* dst, int width, int height, int startX, int startY, int blockSize, int threadID, auto start) {
     int endX = min(startX + blockSize, width);
     int endY = min(startY + blockSize, height);
@@ -63,7 +61,6 @@ void blurImage(const uint8_t* src, uint8_t* dst, int width, int height, int star
             dst[(y * width + x) * 3 + 1] = sumG / count;
             dst[(y * width + x) * 3 + 2] = sumR / count;
 
-            // Запись времени выполнения для каждого пикселя
             auto now = std::chrono::steady_clock::now();
             auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
 
@@ -73,7 +70,6 @@ void blurImage(const uint8_t* src, uint8_t* dst, int width, int height, int star
     }
 }
 
-// Функция обработки блоков изображения
 void processBlocks(const uint8_t* src, uint8_t* dst, int width, int height, int blockSize, int blocksPerThread, int threadID) {
     auto start = std::chrono::steady_clock::now();
 
@@ -121,7 +117,6 @@ int main(int argc, char* argv[]) {
     inputFile.read(reinterpret_cast<char*>(srcImage.data()), imageSize);
     inputFile.close();
 
-    // Открытие файла для записи логов
     logFile.open("log.txt");
     if (!logFile) {
         std::cerr << "Error opening log file." << std::endl;
